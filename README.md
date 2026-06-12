@@ -1,13 +1,4 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/status-active-success" alt="Status">
-  <img src="https://img.shields.io/badge/chess-♔-white?labelColor=black" alt="Chess">
-  <img src="https://img.shields.io/badge/MediaPipe-Hands-blue" alt="MediaPipe">
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-</p>
-
-<br>
-
-<p align="center">
   <strong>♚ CV Chess ♔</strong><br>
   <em>Touchless. Intuitive. Chess.</em>
 </p>
