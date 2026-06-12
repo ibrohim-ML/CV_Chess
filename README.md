@@ -126,15 +126,6 @@ The chess engine includes:
 | Safari | ⚠️ May require localhost |
 | Edge | ✅ Supported |
 
----
-
-## 📄 License
-
-This project is licensed under the **MIT License**.  
-See the [LICENSE](LICENSE) file for details.
-
----
-
 <br>
 
 <h1 align="center">♚ CV Chess ♔</h1>
@@ -257,9 +248,3 @@ Shaxmat dvigateli quyidagilarni o'z ichiga oladi:
 | Safari | ⚠️ Localhost talab qilinishi mumkin |
 | Edge | ✅ Qo'llab-quvvatlanadi |
 
----
-
-## 📄 Litsenziya
-
-Ushbu loyiha **MIT litsenziyasi** bilan himoyalangan.  
-Batafsil ma'lumot uchun [LICENSE](LICENSE) fayliga qarang.
