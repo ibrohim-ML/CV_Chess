@@ -1,0 +1,1202 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Qo‘l bilan boshqariladigan shaxmat</title>
+  <style>
+    :root {
+      --bg: #f4efe5;
+      --panel: #ffffff;
+      --board-light: #f0d9b5;
+      --board-dark: #b58863;
+      --text: #1f2328;
+      --muted: #57606a;
+      --accent: #0a7cff;
+      --danger: #c92c2c;
+      --ok: #1f883d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at 25% 10%, #fbf9f5 0%, var(--bg) 52%, #e9e1d4 100%);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .start-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
+
+    .start-card {
+      width: min(92vw, 560px);
+      background: var(--panel);
+      border-radius: 14px;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.16);
+      padding: 22px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .start-title {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 34px);
+      letter-spacing: 0.3px;
+    }
+
+    .start-help {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .server-note {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 10px;
+      line-height: 1.45;
+    }
+
+    .enable-btn {
+      border: 0;
+      border-radius: 10px;
+      background: var(--accent);
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 12px 16px;
+      cursor: pointer;
+    }
+
+    .enable-btn:disabled {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    .error {
+      min-height: 22px;
+      font-size: 14px;
+      color: var(--danger);
+      line-height: 1.4;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+
+    .layout {
+      width: min(100%, 1050px);
+      display: grid;
+      grid-template-columns: minmax(300px, 700px);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .board-panel {
+      background: rgba(255, 255, 255, 0.82);
+      border-radius: 14px;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.12);
+      padding: 12px;
+      backdrop-filter: blur(2px);
+    }
+
+    .status-line {
+      min-height: 24px;
+      font-weight: 600;
+      font-size: 15px;
+      margin: 0 0 10px 0;
+    }
+
+    .board-frame {
+      width: 100%;
+      max-width: 700px;
+      position: relative;
+      margin: 0 auto;
+    }
+
+    .board-wrap {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      position: relative;
+      margin: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 3px solid #583f2d;
+      background: #2f241c;
+    }
+
+    #board {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      user-select: none;
+      touch-action: none;
+    }
+
+    .square {
+      position: relative;
+      display: grid;
+      place-items: center;
+    }
+
+    .square.light {
+      background: var(--board-light);
+    }
+
+    .square.dark {
+      background: var(--board-dark);
+    }
+
+    .square.hovered {
+      box-shadow: inset 0 0 0 3px rgba(10, 124, 255, 0.65);
+    }
+
+    .square.grabbed-origin {
+      box-shadow: inset 0 0 0 4px rgba(255, 180, 0, 0.95);
+    }
+
+    .square.valid-target::after {
+      content: "";
+      width: 24%;
+      height: 24%;
+      border-radius: 50%;
+      background: rgba(10, 124, 255, 0.58);
+      position: absolute;
+    }
+
+    .square.in-check {
+      box-shadow:
+        inset 0 0 0 4px rgba(201, 44, 44, 0.95),
+        inset 0 0 28px rgba(201, 44, 44, 0.46);
+    }
+
+    .piece {
+      font-size: clamp(24px, 4.5vw, 46px);
+      line-height: 1;
+      pointer-events: none;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+      position: relative;
+      z-index: 2;
+    }
+
+    .board-coords {
+      position: absolute;
+      font-size: 11px;
+      font-weight: 600;
+      opacity: 0.82;
+      pointer-events: none;
+      user-select: none;
+      z-index: 2;
+      color: #4a3c2f;
+    }
+
+    .board-coords-bottom {
+      left: 0;
+      top: calc(100% + 6px);
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+    }
+
+    .board-coords-left {
+      top: 0;
+      right: calc(100% + 8px);
+      height: 100%;
+      width: 14px;
+      display: grid;
+      grid-template-rows: repeat(8, 1fr);
+    }
+
+    .board-coords span {
+      display: grid;
+      place-items: center;
+    }
+
+    #cursor {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      margin-left: -11px;
+      margin-top: -11px;
+      border-radius: 50%;
+      border: 2px solid #101820;
+      background: rgba(255, 255, 255, 0.45);
+      box-shadow: 0 0 0 3px rgba(10, 124, 255, 0.24);
+      pointer-events: none;
+      z-index: 30;
+      transition: opacity 0.2s ease;
+    }
+
+    #cursor.pinch {
+      transform: scale(0.85);
+      background: rgba(31, 136, 61, 0.45);
+      box-shadow: 0 0 0 4px rgba(31, 136, 61, 0.28);
+    }
+
+    #cursor.faded {
+      opacity: 0.35;
+    }
+
+    #dragPiece {
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform: translate(-50%, -50%);
+      font-size: clamp(30px, 5vw, 50px);
+      line-height: 1;
+      pointer-events: none;
+      z-index: 40;
+      display: none;
+      text-shadow: 0 3px 7px rgba(0, 0, 0, 0.36);
+    }
+
+    .board-wrap.game-over::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(18, 22, 28, 0.34);
+      z-index: 45;
+      pointer-events: none;
+    }
+
+    .game-over-banner {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(88%, 430px);
+      padding: 16px 18px;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.62);
+      background: rgba(24, 31, 40, 0.9);
+      color: #ffffff;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.45;
+      white-space: pre-line;
+      z-index: 55;
+      pointer-events: none;
+    }
+
+    .debug-panel {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 50;
+      width: 280px;
+      max-height: 40vh;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .debug-title {
+      margin: 0;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    #debugText {
+      margin: 0;
+      white-space: pre-wrap;
+      font-family: "Consolas", "Menlo", monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #24292f;
+      min-height: 170px;
+    }
+
+    .turn-text {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .video-overlay {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      width: min(28vw, 260px);
+      aspect-ratio: 4 / 3;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #111;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+      z-index: 60;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #webcam,
+    #handCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .video-overlay {
+        width: min(36vw, 220px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <section id="startScreen" class="start-screen">
+    <div class="start-card">
+      <h1 class="start-title">Qo‘l bilan boshqariladigan shaxmat</h1>
+      <p class="start-help">Kursor sifatida ko‘rsatkich barmoq uchidan foydalaning. Ushlash uchun barmoqni chimching, tashlash uchun qo‘yib yuboring.</p>
+      <p class="server-note">Mahalliy server orqali ishga tushiring: <code>python -m http.server 8000</code><br/><code>http://localhost:8000</code> orqali oching (veb-kamera ko‘pincha HTTPS yoki localhost talab qiladi).</p>
+      <button id="enableCameraBtn" class="enable-btn" type="button">Kamerani yoqish</button>
+      <div id="startError" class="error"></div>
+    </div>
+  </section>
+
+  <main id="gameScreen" class="app hidden">
+    <div class="layout">
+      <section class="board-panel">
+        <p id="statusLine" class="status-line">Kamera: O‘CHIQLI | Qo‘l: aniqlanmadi | Chimchish: YO‘Q</p>
+        <div class="board-frame">
+          <div class="board-wrap" id="boardWrap">
+            <div id="board" aria-label="Shaxmat taxtasi"></div>
+            <div id="cursor"></div>
+            <div id="dragPiece" aria-hidden="true"></div>
+            <div id="gameOverBanner" class="game-over-banner hidden" aria-live="polite"></div>
+          </div>
+          <div id="coordsBottom" class="board-coords board-coords-bottom" aria-hidden="true"></div>
+          <div id="coordsLeft" class="board-coords board-coords-left" aria-hidden="true"></div>
+        </div>
+      </section>
+
+    </div>
+
+    <aside class="debug-panel">
+      <p class="debug-title">Nosozlik paneli</p>
+      <p id="turnText" class="turn-text">Navbat: Oq</p>
+      <pre id="debugText">Kamera kutilmoqda...</pre>
+    </aside>
+  </main>
+
+  <div id="videoOverlay" class="video-overlay hidden">
+    <video id="webcam" autoplay playsinline muted></video>
+    <canvas id="handCanvas" width="640" height="480"></canvas>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+  <script>
+    (() => {
+      const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
+      const PIECE_SYMBOLS = {
+        wK: "♔", wQ: "♕", wR: "♖", wB: "♗", wN: "♘", wP: "♙",
+        bK: "♚", bQ: "♛", bR: "♜", bB: "♝", bN: "♞", bP: "♟"
+      };
+
+      const PINCH_ON = 0.035;
+      const PINCH_OFF = 0.050;
+      const BASE_SMOOTH_ALPHA = 0.4;
+      const FAST_SMOOTH_ALPHA = 0.68;
+      const FAST_MOVE_PX = 18;
+      const DEADZONE_PX = 0.9;
+      const INPUT_CENTER_X = 0.5;
+      const INPUT_CENTER_Y = 0.5;
+      const INPUT_RANGE_X = 0.62;
+      const INPUT_RANGE_Y = 0.62;
+
+      const startScreen = document.getElementById("startScreen");
+      const gameScreen = document.getElementById("gameScreen");
+      const videoOverlay = document.getElementById("videoOverlay");
+      const enableCameraBtn = document.getElementById("enableCameraBtn");
+      const startError = document.getElementById("startError");
+
+      const boardWrap = document.getElementById("boardWrap");
+      const boardEl = document.getElementById("board");
+      const coordsBottomEl = document.getElementById("coordsBottom");
+      const coordsLeftEl = document.getElementById("coordsLeft");
+      const cursorEl = document.getElementById("cursor");
+      const dragPieceEl = document.getElementById("dragPiece");
+      const gameOverBannerEl = document.getElementById("gameOverBanner");
+
+      const statusLine = document.getElementById("statusLine");
+      const turnText = document.getElementById("turnText");
+      const debugText = document.getElementById("debugText");
+
+      const webcamEl = document.getElementById("webcam");
+      const handCanvas = document.getElementById("handCanvas");
+      const handCtx = handCanvas.getContext("2d");
+
+      let hands = null;
+      let camera = null;
+      let animationRunning = false;
+
+      const state = {
+        board: createInitialBoard(),
+        turn: "w",
+        cameraOn: false,
+        hoveredSquare: null,
+        validTargets: [],
+        checkSquares: [],
+        gameOver: false,
+        gameOverText: "",
+        drag: {
+          active: false,
+          from: null,
+          piece: null,
+          offsetX: 0,
+          offsetY: 0
+        },
+        tracking: {
+          rawX: null,
+          rawY: null,
+          smoothX: null,
+          smoothY: null,
+          pinchDistance: Infinity,
+          pinch: false,
+          prevPinch: false,
+          handDetected: false,
+          rawHandDetected: false,
+          lastSeenTs: 0
+        }
+      };
+
+      function createInitialBoard() {
+        return [
+          ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
+          ["bP", "bP", "bP", "bP", "bP", "bP", "bP", "bP"],
+          [null, null, null, null, null, null, null, null],
+          [null, null, null, null, null, null, null, null],
+          [null, null, null, null, null, null, null, null],
+          [null, null, null, null, null, null, null, null],
+          ["wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP"],
+          ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
+        ];
+      }
+
+      function initBoardDom() {
+        const frag = document.createDocumentFragment();
+        for (let row = 0; row < 8; row += 1) {
+          for (let col = 0; col < 8; col += 1) {
+            const square = document.createElement("div");
+            square.className = "square " + (((row + col) % 2 === 0) ? "light" : "dark");
+            square.dataset.row = String(row);
+            square.dataset.col = String(col);
+
+            const pieceEl = document.createElement("span");
+            pieceEl.className = "piece";
+
+            square.appendChild(pieceEl);
+            frag.appendChild(square);
+          }
+        }
+        boardEl.innerHTML = "";
+        boardEl.appendChild(frag);
+
+        if (coordsBottomEl) {
+          coordsBottomEl.innerHTML = "";
+          FILES.forEach((file) => {
+            const label = document.createElement("span");
+            label.textContent = file;
+            coordsBottomEl.appendChild(label);
+          });
+        }
+
+        if (coordsLeftEl) {
+          coordsLeftEl.innerHTML = "";
+          for (let row = 0; row < 8; row += 1) {
+            const label = document.createElement("span");
+            label.textContent = String(8 - row);
+            coordsLeftEl.appendChild(label);
+          }
+        }
+      }
+
+      function inBounds(row, col) {
+        return row >= 0 && row < 8 && col >= 0 && col < 8;
+      }
+
+      function pieceColor(piece) {
+        return piece ? piece[0] : null;
+      }
+
+      function pieceType(piece) {
+        return piece ? piece[1] : null;
+      }
+
+      function isEmptyOnBoard(board, row, col) {
+        return inBounds(row, col) && board[row][col] === null;
+      }
+
+      function isEnemyOnBoard(board, row, col, color) {
+        if (!inBounds(row, col)) return false;
+        const piece = board[row][col];
+        return Boolean(piece && pieceColor(piece) !== color);
+      }
+
+      function isFriendlyOnBoard(board, row, col, color) {
+        if (!inBounds(row, col)) return false;
+        const piece = board[row][col];
+        return Boolean(piece && pieceColor(piece) === color);
+      }
+
+      function isEmpty(row, col) {
+        return isEmptyOnBoard(state.board, row, col);
+      }
+
+      function isEnemy(row, col, color) {
+        return isEnemyOnBoard(state.board, row, col, color);
+      }
+
+      function isFriendly(row, col, color) {
+        return isFriendlyOnBoard(state.board, row, col, color);
+      }
+
+      function collectSlidingMovesOnBoard(board, fromRow, fromCol, color, directions) {
+        const moves = [];
+        directions.forEach(([dr, dc]) => {
+          let row = fromRow + dr;
+          let col = fromCol + dc;
+          while (inBounds(row, col)) {
+            if (isEmptyOnBoard(board, row, col)) {
+              moves.push({ row, col });
+            } else {
+              if (isEnemyOnBoard(board, row, col, color)) moves.push({ row, col });
+              break;
+            }
+            row += dr;
+            col += dc;
+          }
+        });
+        return moves;
+      }
+
+      function collectSlidingMoves(fromRow, fromCol, color, directions) {
+        return collectSlidingMovesOnBoard(state.board, fromRow, fromCol, color, directions);
+      }
+
+      function getPseudoMovesOnBoard(board, fromRow, fromCol) {
+        if (!inBounds(fromRow, fromCol)) return [];
+        const piece = board[fromRow][fromCol];
+        if (!piece) return [];
+
+        const color = pieceColor(piece);
+        const type = pieceType(piece);
+        const moves = [];
+
+        if (type === "P") {
+          const dir = color === "w" ? -1 : 1;
+          const startRow = color === "w" ? 6 : 1;
+          const oneStepRow = fromRow + dir;
+
+          if (inBounds(oneStepRow, fromCol) && isEmptyOnBoard(board, oneStepRow, fromCol)) {
+            moves.push({ row: oneStepRow, col: fromCol });
+            const twoStepRow = fromRow + (2 * dir);
+            if (fromRow === startRow && isEmptyOnBoard(board, twoStepRow, fromCol)) {
+              moves.push({ row: twoStepRow, col: fromCol });
+            }
+          }
+
+          const captureCols = [fromCol - 1, fromCol + 1];
+          captureCols.forEach((c) => {
+            if (inBounds(oneStepRow, c) && isEnemyOnBoard(board, oneStepRow, c, color)) {
+              moves.push({ row: oneStepRow, col: c });
+            }
+          });
+
+          return moves;
+        }
+
+        if (type === "N") {
+          const jumps = [
+            [-2, -1], [-2, 1],
+            [-1, -2], [-1, 2],
+            [1, -2], [1, 2],
+            [2, -1], [2, 1]
+          ];
+          jumps.forEach(([dr, dc]) => {
+            const row = fromRow + dr;
+            const col = fromCol + dc;
+            if (!inBounds(row, col)) return;
+            if (!isFriendlyOnBoard(board, row, col, color)) moves.push({ row, col });
+          });
+          return moves;
+        }
+
+        if (type === "B") {
+          return collectSlidingMovesOnBoard(board, fromRow, fromCol, color, [[-1, -1], [-1, 1], [1, -1], [1, 1]]);
+        }
+
+        if (type === "R") {
+          return collectSlidingMovesOnBoard(board, fromRow, fromCol, color, [[-1, 0], [1, 0], [0, -1], [0, 1]]);
+        }
+
+        if (type === "Q") {
+          return collectSlidingMovesOnBoard(board, fromRow, fromCol, color, [
+            [-1, -1], [-1, 1], [1, -1], [1, 1],
+            [-1, 0], [1, 0], [0, -1], [0, 1]
+          ]);
+        }
+
+        if (type === "K") {
+          for (let dr = -1; dr <= 1; dr += 1) {
+            for (let dc = -1; dc <= 1; dc += 1) {
+              if (dr === 0 && dc === 0) continue;
+              const row = fromRow + dr;
+              const col = fromCol + dc;
+              if (!inBounds(row, col)) continue;
+              if (!isFriendlyOnBoard(board, row, col, color)) moves.push({ row, col });
+            }
+          }
+          return moves;
+        }
+
+        return moves;
+      }
+
+      function cloneBoard(board) {
+        return board.map((row) => row.slice());
+      }
+
+      function applyMoveOnBoard(board, from, to) {
+        const nextBoard = cloneBoard(board);
+        const movingPiece = nextBoard[from.row][from.col];
+        nextBoard[from.row][from.col] = null;
+
+        if (movingPiece === "wP" && to.row === 0) {
+          nextBoard[to.row][to.col] = "wQ";
+        } else if (movingPiece === "bP" && to.row === 7) {
+          nextBoard[to.row][to.col] = "bQ";
+        } else {
+          nextBoard[to.row][to.col] = movingPiece;
+        }
+
+        return nextBoard;
+      }
+
+      function findKing(board, color) {
+        const king = color + "K";
+        for (let row = 0; row < 8; row += 1) {
+          for (let col = 0; col < 8; col += 1) {
+            if (board[row][col] === king) return { row, col };
+          }
+        }
+        return null;
+      }
+
+      function isSquareUnderAttack(board, targetRow, targetCol, attackerColor) {
+        for (let row = 0; row < 8; row += 1) {
+          for (let col = 0; col < 8; col += 1) {
+            const piece = board[row][col];
+            if (!piece || pieceColor(piece) !== attackerColor) continue;
+
+            const type = pieceType(piece);
+
+            if (type === "P") {
+              const dir = attackerColor === "w" ? -1 : 1;
+              if (row + dir === targetRow && (col - 1 === targetCol || col + 1 === targetCol)) {
+                return true;
+              }
+              continue;
+            }
+
+            if (type === "N") {
+              const jumps = [
+                [-2, -1], [-2, 1],
+                [-1, -2], [-1, 2],
+                [1, -2], [1, 2],
+                [2, -1], [2, 1]
+              ];
+              if (jumps.some(([dr, dc]) => row + dr === targetRow && col + dc === targetCol)) {
+                return true;
+              }
+              continue;
+            }
+
+            if (type === "K") {
+              if (Math.abs(row - targetRow) <= 1 && Math.abs(col - targetCol) <= 1) {
+                return true;
+              }
+              continue;
+            }
+
+            const directions = [];
+            if (type === "B" || type === "Q") {
+              directions.push([-1, -1], [-1, 1], [1, -1], [1, 1]);
+            }
+            if (type === "R" || type === "Q") {
+              directions.push([-1, 0], [1, 0], [0, -1], [0, 1]);
+            }
+
+            for (let i = 0; i < directions.length; i += 1) {
+              const [dr, dc] = directions[i];
+              let r = row + dr;
+              let c = col + dc;
+              while (inBounds(r, c)) {
+                if (r === targetRow && c === targetCol) return true;
+                if (board[r][c] !== null) break;
+                r += dr;
+                c += dc;
+              }
+            }
+          }
+        }
+        return false;
+      }
+
+      function isKingInCheck(color, board = state.board) {
+        const kingPos = findKing(board, color);
+        if (!kingPos) return false;
+        const attacker = color === "w" ? "b" : "w";
+        return isSquareUnderAttack(board, kingPos.row, kingPos.col, attacker);
+      }
+
+      function getKingSafeMoves(board, fromRow, fromCol) {
+        const piece = board[fromRow][fromCol];
+        if (!piece) return [];
+        const color = pieceColor(piece);
+        const pseudoMoves = getPseudoMovesOnBoard(board, fromRow, fromCol);
+        return pseudoMoves.filter((to) => {
+          const nextBoard = applyMoveOnBoard(board, { row: fromRow, col: fromCol }, to);
+          return !isKingInCheck(color, nextBoard);
+        });
+      }
+
+      function hasAnyLegalMoves(color, board = state.board) {
+        for (let row = 0; row < 8; row += 1) {
+          for (let col = 0; col < 8; col += 1) {
+            const piece = board[row][col];
+            if (!piece || pieceColor(piece) !== color) continue;
+            if (getKingSafeMoves(board, row, col).length > 0) return true;
+          }
+        }
+        return false;
+      }
+
+      function updateGameStateFlags() {
+        const nextCheckSquares = [];
+        ["w", "b"].forEach((color) => {
+          const kingPos = findKing(state.board, color);
+          if (!kingPos) return;
+          const attacker = color === "w" ? "b" : "w";
+          if (isSquareUnderAttack(state.board, kingPos.row, kingPos.col, attacker)) {
+            nextCheckSquares.push(moveKey(kingPos.row, kingPos.col));
+          }
+        });
+        state.checkSquares = nextCheckSquares;
+
+        const sideToMove = state.turn;
+        const sideInCheck = isKingInCheck(sideToMove, state.board);
+        if (sideInCheck && !hasAnyLegalMoves(sideToMove, state.board)) {
+          const winner = sideToMove === "w" ? "b" : "w";
+          state.gameOver = true;
+          state.gameOverText = "Shox-mat! O‘yin tugadi.\n" + (winner === "w" ? "Oq g‘alaba qozondi." : "Qora g‘alaba qozondi.");
+        } else {
+          state.gameOver = false;
+          state.gameOverText = "";
+        }
+
+        updateGameOverUi();
+      }
+
+      function updateGameOverUi() {
+        boardWrap.classList.toggle("game-over", state.gameOver);
+
+        if (!gameOverBannerEl) return;
+        if (state.gameOver) {
+          gameOverBannerEl.textContent = state.gameOverText;
+          gameOverBannerEl.classList.remove("hidden");
+        } else {
+          gameOverBannerEl.textContent = "";
+          gameOverBannerEl.classList.add("hidden");
+        }
+      }
+
+      function getLegalMoves(fromRow, fromCol) {
+        if (!inBounds(fromRow, fromCol)) return [];
+        const piece = state.board[fromRow][fromCol];
+        if (!piece) return [];
+        if (state.gameOver) return [];
+
+        const color = pieceColor(piece);
+        if (color !== state.turn) return [];
+        return getKingSafeMoves(state.board, fromRow, fromCol);
+      }
+
+      function moveKey(row, col) {
+        return row + "," + col;
+      }
+
+      function isLegalTarget(row, col, targets) {
+        const targetSet = new Set(targets.map((m) => moveKey(m.row, m.col)));
+        return targetSet.has(moveKey(row, col));
+      }
+
+      function boardSizePx() {
+        return boardEl.getBoundingClientRect().width;
+      }
+
+      function clamp(n, min, max) {
+        return Math.max(min, Math.min(max, n));
+      }
+
+      function mapNormalizedToBoard(normValue, center, range) {
+        const half = range / 2;
+        const min = center - half;
+        return clamp((normValue - min) / range, 0, 1);
+      }
+
+      function cursorToSquare(x, y) {
+        const size = boardSizePx();
+        const cell = size / 8;
+        const col = clamp(Math.floor(x / cell), 0, 7);
+        const row = clamp(Math.floor(y / cell), 0, 7);
+        return { row, col };
+      }
+
+      function startGrab() {
+        if (state.gameOver || !state.tracking.handDetected || state.drag.active) return;
+        if (state.tracking.smoothX == null || state.tracking.smoothY == null) return;
+
+        const { row, col } = cursorToSquare(state.tracking.smoothX, state.tracking.smoothY);
+        const piece = state.board[row][col];
+        if (!piece || pieceColor(piece) !== state.turn) return;
+
+        const legal = getLegalMoves(row, col);
+        if (legal.length === 0) return;
+        state.validTargets = legal;
+        state.drag.active = true;
+        state.drag.from = { row, col };
+        state.drag.piece = piece;
+
+        const cell = boardSizePx() / 8;
+        const centerX = (col + 0.5) * cell;
+        const centerY = (row + 0.5) * cell;
+        state.drag.offsetX = centerX - state.tracking.smoothX;
+        state.drag.offsetY = centerY - state.tracking.smoothY;
+      }
+
+      function cancelGrab() {
+        state.drag.active = false;
+        state.drag.from = null;
+        state.drag.piece = null;
+        state.drag.offsetX = 0;
+        state.drag.offsetY = 0;
+        state.validTargets = [];
+      }
+
+      function switchTurn() {
+        state.turn = state.turn === "w" ? "b" : "w";
+      }
+
+      function commitMove(from, to) {
+        state.board = applyMoveOnBoard(state.board, from, to);
+        switchTurn();
+        updateGameStateFlags();
+      }
+
+      function dropGrab() {
+        if (!state.drag.active || !state.drag.from) return;
+        if (state.gameOver) {
+          cancelGrab();
+          return;
+        }
+        if (state.tracking.smoothX == null || state.tracking.smoothY == null) {
+          cancelGrab();
+          return;
+        }
+
+        const from = state.drag.from;
+        const to = cursorToSquare(state.tracking.smoothX, state.tracking.smoothY);
+
+        if (isLegalTarget(to.row, to.col, state.validTargets)) {
+          commitMove(from, to);
+        }
+
+        cancelGrab();
+      }
+
+      function updateStatusLine() {
+        const handText = state.tracking.handDetected ? "aniqlandi" : "aniqlanmadi";
+        const pinchText = state.tracking.pinch ? "BOR" : "YO‘Q";
+        const cameraText = state.cameraOn ? "YOQILDI" : "O‘CHIQLI";
+        statusLine.textContent = "Kamera: " + cameraText + " | Qo‘l: " + handText + " | Chimchish: " + pinchText;
+        turnText.textContent = "Navbat: " + (state.turn === "w" ? "Oq" : "Qora");
+      }
+
+      function updateDebugPanel() {
+        const t = state.tracking;
+        const fmt = (v, d = 2) => (typeof v === "number" && Number.isFinite(v)) ? v.toFixed(d) : "-";
+        const distText = Number.isFinite(t.pinchDistance) ? t.pinchDistance.toFixed(5) : "-";
+
+        debugText.textContent = [
+          "Qo‘l aniqlandi: " + String(t.handDetected),
+          "xomX/xomY: " + fmt(t.rawX, 1) + " / " + fmt(t.rawY, 1),
+          "silliqX/silliqY: " + fmt(t.smoothX, 1) + " / " + fmt(t.smoothY, 1),
+          "chimchish masofasi: " + distText,
+          "chimchish holati: " + String(t.pinch),
+          "ustidagi katak: " + (state.hoveredSquare ? FILES[state.hoveredSquare.col] + (8 - state.hoveredSquare.row) : "-")
+        ].join("\n");
+      }
+
+      function updateCursorAndHover(nowTs) {
+        const t = state.tracking;
+
+        t.handDetected = (nowTs - t.lastSeenTs) < 260;
+        if (!t.handDetected) {
+          t.pinch = false;
+        }
+
+        const size = boardSizePx();
+        if (size <= 0) return;
+
+        if (typeof t.rawX === "number" && typeof t.rawY === "number") {
+          if (t.smoothX == null || t.smoothY == null) {
+            t.smoothX = t.rawX;
+            t.smoothY = t.rawY;
+          } else {
+            const dx = t.rawX - t.smoothX;
+            const dy = t.rawY - t.smoothY;
+            const movement = Math.hypot(dx, dy);
+            const alpha = movement > FAST_MOVE_PX ? FAST_SMOOTH_ALPHA : BASE_SMOOTH_ALPHA;
+            if (Math.abs(dx) >= DEADZONE_PX) t.smoothX += dx * alpha;
+            if (Math.abs(dy) >= DEADZONE_PX) t.smoothY += dy * alpha;
+          }
+        }
+
+        if (t.smoothX != null && t.smoothY != null) {
+          t.smoothX = clamp(t.smoothX, 0, size - 1);
+          t.smoothY = clamp(t.smoothY, 0, size - 1);
+          state.hoveredSquare = cursorToSquare(t.smoothX, t.smoothY);
+
+          cursorEl.style.left = t.smoothX + "px";
+          cursorEl.style.top = t.smoothY + "px";
+        }
+
+        cursorEl.classList.toggle("pinch", t.pinch);
+        cursorEl.classList.toggle("faded", !t.handDetected);
+
+        if (state.drag.active && state.drag.piece && t.smoothX != null && t.smoothY != null) {
+          dragPieceEl.style.display = "block";
+          dragPieceEl.style.left = (t.smoothX + state.drag.offsetX) + "px";
+          dragPieceEl.style.top = (t.smoothY + state.drag.offsetY) + "px";
+          dragPieceEl.textContent = PIECE_SYMBOLS[state.drag.piece] || "";
+        } else {
+          dragPieceEl.style.display = "none";
+          dragPieceEl.textContent = "";
+        }
+      }
+
+      function renderBoard() {
+        const hoveredKey = state.hoveredSquare ? moveKey(state.hoveredSquare.row, state.hoveredSquare.col) : null;
+        const validSet = new Set(state.validTargets.map((m) => moveKey(m.row, m.col)));
+        const checkSet = new Set(state.checkSquares);
+
+        boardEl.querySelectorAll(".square").forEach((sq) => {
+          const row = Number(sq.dataset.row);
+          const col = Number(sq.dataset.col);
+          const key = moveKey(row, col);
+          const pieceSpan = sq.querySelector(".piece");
+          const piece = state.board[row][col];
+
+          const hiddenByDrag = state.drag.active && state.drag.from && state.drag.from.row === row && state.drag.from.col === col;
+          pieceSpan.textContent = (piece && !hiddenByDrag) ? PIECE_SYMBOLS[piece] : "";
+
+          sq.classList.toggle("hovered", hoveredKey === key);
+          sq.classList.toggle("grabbed-origin", Boolean(state.drag.active && state.drag.from && state.drag.from.row === row && state.drag.from.col === col));
+          sq.classList.toggle("valid-target", validSet.has(key));
+          sq.classList.toggle("in-check", checkSet.has(key));
+        });
+      }
+
+      function onHandResults(results) {
+        handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+
+        if (results.image) {
+          handCtx.drawImage(results.image, 0, 0, handCanvas.width, handCanvas.height);
+        }
+
+        const landmarks = results.multiHandLandmarks && results.multiHandLandmarks[0];
+        if (!landmarks) {
+          state.tracking.rawHandDetected = false;
+          state.tracking.pinchDistance = Infinity;
+          return;
+        }
+
+        state.tracking.rawHandDetected = true;
+        state.tracking.lastSeenTs = performance.now();
+
+        const indexTip = landmarks[8];
+        const thumbTip = landmarks[4];
+
+        const size = boardSizePx();
+        if (size > 0) {
+          // Coordinate mapping from normalized camera space [0..1] to board-local pixels:
+          // A reduced effective input range gives higher control sensitivity
+          // so smaller hand movement can cover the full board.
+          const mappedNormX = mapNormalizedToBoard(indexTip.x, INPUT_CENTER_X, INPUT_RANGE_X);
+          const mappedNormY = mapNormalizedToBoard(indexTip.y, INPUT_CENTER_Y, INPUT_RANGE_Y);
+          // x_screen = (1 - x_norm) * boardWidth   (mirrored for natural feel)
+          // y_screen = y_norm * boardHeight
+          const rawX = (1 - mappedNormX) * size;
+          const rawY = mappedNormY * size;
+          state.tracking.rawX = rawX;
+          state.tracking.rawY = rawY;
+        }
+
+        // Pinch detection in normalized coordinates using hysteresis:
+        // pinch ON  when distance < 0.035
+        // pinch OFF when distance > 0.050
+        const pinchDist = Math.hypot(indexTip.x - thumbTip.x, indexTip.y - thumbTip.y);
+        state.tracking.pinchDistance = pinchDist;
+
+        if (!state.tracking.pinch && pinchDist < PINCH_ON) {
+          state.tracking.pinch = true;
+        } else if (state.tracking.pinch && pinchDist > PINCH_OFF) {
+          state.tracking.pinch = false;
+        }
+
+        if (window.drawConnectors && window.drawLandmarks && window.HAND_CONNECTIONS) {
+          drawConnectors(handCtx, landmarks, HAND_CONNECTIONS, { color: "#00ff85", lineWidth: 2 });
+          drawLandmarks(handCtx, landmarks, { color: "#ff2d55", radius: 2, lineWidth: 1 });
+        }
+      }
+
+      function updateInteractionTransitions() {
+        const pinch = state.tracking.pinch;
+        const prev = state.tracking.prevPinch;
+
+        if (state.gameOver) {
+          if (state.drag.active) {
+            cancelGrab();
+          }
+          state.tracking.prevPinch = pinch;
+          return;
+        }
+
+        if (pinch && !prev) {
+          startGrab();
+        }
+
+        if (!pinch && prev) {
+          if (state.drag.active) {
+            if (state.tracking.handDetected) {
+              dropGrab();
+            } else {
+              cancelGrab();
+            }
+          }
+        }
+
+        state.tracking.prevPinch = pinch;
+      }
+
+      function animationLoop(ts) {
+        if (!state.cameraOn) {
+          animationRunning = false;
+          return;
+        }
+
+        updateCursorAndHover(ts);
+        updateInteractionTransitions();
+        renderBoard();
+        updateStatusLine();
+        updateDebugPanel();
+
+        requestAnimationFrame(animationLoop);
+      }
+
+      async function enableCamera() {
+        startError.textContent = "";
+
+        if (!window.Hands || !window.Camera) {
+          startError.textContent = "MediaPipe yuklanmadi. Iltimos, internet aloqasini tekshirib, sahifani qayta yuklang.";
+          return;
+        }
+
+        enableCameraBtn.disabled = true;
+
+        try {
+          hands = new Hands({
+            locateFile: (file) => "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file
+          });
+
+          hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 0,
+            minDetectionConfidence: 0.55,
+            minTrackingConfidence: 0.5
+          });
+
+          hands.onResults(onHandResults);
+
+          camera = new Camera(webcamEl, {
+            onFrame: async () => {
+              await hands.send({ image: webcamEl });
+            },
+            width: 640,
+            height: 480
+          });
+
+          await camera.start();
+
+          state.cameraOn = true;
+          startScreen.classList.add("hidden");
+          gameScreen.classList.remove("hidden");
+          videoOverlay.classList.remove("hidden");
+
+          if (!animationRunning) {
+            animationRunning = true;
+            requestAnimationFrame(animationLoop);
+          }
+        } catch (err) {
+          enableCameraBtn.disabled = false;
+          startError.textContent = "Kameraga ulanish amalga oshmadi. Iltimos, kameraga ruxsat bering va https yoki localhost orqali ishga tushiring.";
+        }
+      }
+
+      function boot() {
+        initBoardDom();
+        updateGameStateFlags();
+        renderBoard();
+        updateStatusLine();
+        updateDebugPanel();
+        enableCameraBtn.addEventListener("click", enableCamera);
+      }
+
+      boot();
+    })();
+  </script>
+</body>
+</html>
